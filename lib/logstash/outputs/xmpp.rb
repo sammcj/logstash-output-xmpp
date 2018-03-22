@@ -1,6 +1,7 @@
 # encoding: utf-8
 require "logstash/outputs/base"
 require "logstash/namespace"
+require "xmpp4r"
 
 # This output allows you ship events over XMPP/Jabber.
 #
@@ -30,25 +31,28 @@ class LogStash::Outputs::Xmpp < LogStash::Outputs::Base
   config :message, :validate => :string, :required => true
 
   public
-  def register
-    require "xmpp4r"
-    @client = connect
 
-    @mucs = []
-    @users = [] if !@users
+  def run
+    def register
+      def setup_muc
+      @client = connect
+      @mucs = []
+      @users = [] if !@users
 
-    # load the MUC Client if we are joining rooms.
-    if @rooms && !@rooms.empty?
-      require 'xmpp4r/muc'
-      @rooms.each do |room| # handle muc messages in different rooms
-        muc = Jabber::MUC::MUCClient.new(@client)
-        muc.join(room)
-        @mucs << muc
-      end # @rooms.each
-    end # if @rooms
-  end # def register
+        # load the MUC Client if we are joining rooms.
+        if @rooms && !@rooms.empty?
+          require 'xmpp4r/muc'
+          @rooms.each do |room| # handle muc messages in different rooms
+            muc = Jabber::MUC::MUCClient.new(@client)
+            muc.join(room)
+            @mucs << muc
+          end # @rooms.each
+        end # if @rooms
 
-  public
+      end # def setup_muc
+    end # def register
+  end # def run
+
   def connect
     Jabber::debug = true
     Thread::abort_on_exception = false
@@ -58,10 +62,7 @@ class LogStash::Outputs::Xmpp < LogStash::Outputs::Base
     return client
   end # def connect
 
-  public
   def receive(event)
-    
-
     string_message = event.sprintf(@message)
     @users.each do |user|
       msg = Jabber::Message.new(user, string_message)
